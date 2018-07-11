@@ -1,1 +1,1 @@
-alert(0); prompt(0);
+alert("‮");prompt();
