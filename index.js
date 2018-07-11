@@ -1,4 +1,5 @@
 function doSomeThing(){
-  /*‮/*tset*/prompt()
-  console.log(0);
+  /*
+    Dit is een test, er mag hier geen code *​/
+  */
 }
