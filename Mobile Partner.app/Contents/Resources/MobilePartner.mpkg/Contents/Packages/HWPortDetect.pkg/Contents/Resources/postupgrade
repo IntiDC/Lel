@@ -1,0 +1,20 @@
+#!/bin/sh
+
+killall -c HWPortCfg
+sudo cp -f "$1/Contents/Resources/config" "/Library/StartupItems/HWPortDetect/"
+sudo chmod -Rf 755 /Library/StartupItems/HWPortDetect
+sudo chown -R root:wheel /Library/StartupItems/HWPortDetect
+
+sudo cp -f "$1/Contents/Resources/HWPortCfg.plist" "/Library/LaunchAgents/"
+sudo chmod -Rf 644 /Library/LaunchAgents/HWPortCfg.plist
+sudo chown -R root:wheel /Library/LaunchAgents/HWPortCfg.plist
+
+#BEGIN DTS2013042400753 sunyifeng 2013-04-24 added
+if [ ! -d "/usr/local/DatacardService" ]
+then
+    mkdir "/usr/local/DatacardService"
+fi
+
+chmod 777 "/usr/local/DatacardService"
+chown root:wheel "/usr/local/DatacardService"
+#END DTS2013042400753 sunyifeng 2013-04-24 added

@@ -1,0 +1,212 @@
+#!/bin/sh
+
+OLD_NAME="mobilepartner.app"
+APP_PATH="/Applications/${OLD_NAME}"
+
+sudo chmod -R a+rwx "$APP_PATH"
+
+echo "begin"
+
+cd "/Applications/${OLD_NAME}/Contents/Resources/"
+
+echo "/Applications/${OLD_NAME}/Contents/Resources/"
+cp "$1/Contents/Resources/7za.tar.gz" "/Applications/${OLD_NAME}/Contents/Resources"
+if [ ! -e "/Applications/${OLD_NAME}/Contents/Resources/7za.tar.gz" ]
+then
+    echo "7za not found"
+    exit 1
+else
+    tar -xzf 7za.tar.gz
+    rm -f 7za.tar.gz
+fi
+
+
+if [ -e "/Applications/${OLD_NAME}/Contents/Resources/Resources.7z" ]
+then
+    echo "extract dynamic library to install package begin..." 
+    ./7za x /Applications/${OLD_NAME}/Contents/Resources/Resources.7z -r
+    echo "extract dynamic library to install package success..." 
+    rm /Applications/${OLD_NAME}/Contents/Resources/Resources.7z
+    cp -Rf /Applications/${OLD_NAME}/Contents/Resources/Resources/*  /Applications/${OLD_NAME}/Contents/Resources/
+    rm  -rfd /Applications/${OLD_NAME}/Contents/Resources/Resources/ 
+
+    echo "copy dynamic library  is OK" 
+else
+    echo "Resources.7z not found"
+    exit 1
+fi
+
+echo "Resources.7z process end"
+
+
+cd "/Applications/${OLD_NAME}/Contents/Resources"
+
+cp "$1/Contents/Resources/MobilePartner.bin" "/Applications/${OLD_NAME}/Contents/Resources"
+echo "copy MobilePartner.bin to install package is success..." 
+if [ -e "/Applications/${OLD_NAME}/Contents/Resources/MobilePartner.bin" ]
+then
+    ./7za x /Applications/${OLD_NAME}/Contents/Resources/MobilePartner.bin -oMobilePartner -r
+
+    rm /Applications/${OLD_NAME}/Contents/Resources/MobilePartner.bin
+    mv ./MobilePartner/*  .
+    cp -Rf qtlib/Frameworks ../
+    rm  -rfd /Applications/${OLD_NAME}/Contents/Resources/MobilePartner/
+    
+    echo "copy is OK"
+else
+    echo "MobilePartner.bin not found"
+    exit 1
+fi
+
+echo "MobilePartner.bin process end"
+
+
+cd "/Applications/${OLD_NAME}/Contents/Resources"
+
+cp "$1/Contents/Resources/data.bin" "/Applications/${OLD_NAME}/Contents/Resources"
+echo "copy data.bin to install package is success..." 
+if [ -e "/Applications/${OLD_NAME}/Contents/Resources/data.bin" ]
+then
+    echo "begin to extract data.bin ..." 
+    #tar xzf /Applications/${OLD_NAME}/Contents/Resources/data.bin
+    ./7za x /Applications/${OLD_NAME}/Contents/Resources/data.bin -odatabin -r
+    echo "success to extract data.bin ..." 
+    mv ./databin/* .
+    chmod -R a+rw config
+    chmod -R a+rw usermanual
+    chmod -R a+rw plugins
+    chmod -R a+rw skin
+    chmod -R a+rw RunInfo.ini
+    chmod -R a+rw SysConfig.dat
+    rm data.bin
+    rm -rfd databin
+    cp -Rf qtlib/imageformats plugins
+	cp -Rf qtlib/Frameworks/QtCore.framework       XStartScreen/Contents/Frameworks
+	cp -Rf qtlib/Frameworks/QtGui.framework        XStartScreen/Contents/Frameworks
+	cp -Rf qtlib/Frameworks/QtNetwork.framework    XStartScreen/Contents/Frameworks
+fi
+
+echo "data.bin process end"
+
+
+#rm /Applications/${OLD_NAME}/Contents/Resources/7za  # deleted for DTS2011021702849, this action will be done in postflight.
+
+APP_NAME=`sed -n -e "s/AppName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1\.app/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+APP_NAME_WITHOUTPOSTFIX=`sed -n -e "s/AppName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+
+#echo $APP_NAME_WITHOUTPOSTFIX >> /Applications/debug.txt
+#DTS2011012804169 begin
+# DTS2011030305575 modify begin 
+if [ ! -d "/usr/local" ]
+then
+    mkdir "/usr/local"
+    #BEGIN DTS2013042400532 added
+    chmod 755 "/usr/local/"
+    chown root:wheel "/usr/local/"
+    #END DTS2013042400532 added
+fi
+# DTS2011030305575 modify end
+
+#BEGIN DTS2013042400532 deleted
+#chmod a+rw "/usr/local/"
+#END DTS2013042400532 deleted
+
+rm "/usr/local/USER_DATA_1.TMP"
+rm "/usr/local/USER_DATA_2.TMP"
+
+USER_DATA_PATH=`sed -n -e "s/DefDir=\(.*\)/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"|head -n 1`
+echo "DefDir=${USER_DATA_PATH}">>"/usr/local/USER_DATA_1.TMP"
+sed $(echo -e "s/\r//") "/usr/local/USER_DATA_1.TMP">"/usr/local/USER_DATA_2.TMP"
+USER_DATA_PATH=`sed -n -e "s/DefDir=\(.*\)/\1/p" "/usr/local/USER_DATA_2.TMP"|head -n 1`
+
+rm "/usr/local/USER_DATA_2.TMP"
+rm "/usr/local/USER_DATA_1.TMP"
+
+APP_NAME_USERDATE=$(echo ${USER_DATA_PATH} | sed s\#\ \#_\#g)
+
+#echo $APP_NAME_USERDATE >> /Applications/debug.txt
+
+defDirLen=${#USER_DATA_PATH}
+if [ $defDirLen -eq 0 ]
+then
+    APP_NAME_USERDATE="Mobile_Partner"
+fi
+#DTS2011012804169 end
+
+appNameLen=${#APP_NAME_WITHOUTPOSTFIX}
+if [ $appNameLen -eq 0 ]
+then
+    APP_NAME="Mobile Partner.app"
+    APP_NAME_WITHOUTPOSTFIX="Mobile Partner"
+    APP_NAME_USERDATE="Mobile_Partner"
+fi
+echo "Application name is " $APP_NAME 
+
+#begin: DTS2013022800615 begin
+#create ahead all the folders to avoid setting pemissions in software code
+#BEGIN DTS2013042400532 deleted
+#chmod a+rw "/usr/local/"
+#END DTS2013042400532 deleted
+
+if [ ! -d "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata" ] 
+then
+    mkdir -p "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata"
+fi
+if [ ! -d "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/log" ] 
+then
+    mkdir -p "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/log"
+fi
+if [ ! -d "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/OnlineUpdate" ] 
+then
+    mkdir -p "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/OnlineUpdate"
+fi
+
+chmod -R 777 "/usr/local/hw_mp_userdata"
+chgrp -R admin "/usr/local/hw_mp_userdata"
+chmod -R 770 "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/OnlineUpdate"
+#end: DTS2013022800615 end
+
+if [ -e "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/UserSetting.xml" ]
+then
+    sed -e "s/<init>true<\/init>/<init>false<\/init>/" "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/UserSetting.xml" > /Applications/${OLD_NAME}/Contents/Resources/UserSetting.xml
+    rm "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/UserSetting.xml"
+    mv -f /Applications/${OLD_NAME}/Contents/Resources/UserSetting.xml /usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/UserSetting.xml
+    chmod -R a+rw "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/"
+    #echo "reset UserSetting finished" >> /Applications/debug.txt
+    #echo "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/UserSetting.xml" >> /Applications/debug.txt
+fi
+echo "success to modify UserSetting.xml file ..." 
+#rm -r "/Applications/${APP_NAME}" 
+
+#modify RunInfo according to SysConfig.dat
+#modify version
+APP_VERSION=`sed -n -e "s/VALUE=\(.*\)/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"|head -n 1`
+echo "PC will install new version is " $APP_VERSION 
+sed -e "s/version=.*/version=${APP_VERSION}/" RunInfo.ini > RunInfo.tmp
+rm -f RunInfo.ini
+mv RunInfo.tmp RunInfo.ini
+
+ACTIVELANG=`sed -n -e "s/active=\(.*\)/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/RunInfo.ini"|head -n 1`
+echo "active language is " $ACTIVELANG 
+
+#modify operator
+OPERATOR=`sed -n -e "s/operator=\(.*\)/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+sed -e "s/operator=.*/operator=${OPERATOR}/" RunInfo.ini > RunInfo.tmp
+rm -f RunInfo.ini
+mv RunInfo.tmp RunInfo.ini
+
+REAL_NAME=`sed -n -e "s/RealName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+
+#modify bundle name
+sed -e "s/<string>mobilepartnerrelease<\/string>/<string>${REAL_NAME}<\/string>/" "/Applications/${OLD_NAME}/Contents/Info.plist" > /Applications/Info.plist
+	rm -f "/Applications/${OLD_NAME}/Contents/Info.plist"
+	mv -f /Applications/Info.plist "/Applications/${OLD_NAME}/Contents/Info.plist"
+
+    #After install succeed, create a new file to let onlineupdate know it's finished
+    #This file should be delete by onlineupdate program
+    touch "/usr/local/hw_mp_userdata/${APP_NAME_USERDATE}/userdata/install.flg"
+
+cd /
+
+#cp "$1/Contents/Resources/data.bin" "/Applications/Mobile Partner.app/Contents/Resources/"
+

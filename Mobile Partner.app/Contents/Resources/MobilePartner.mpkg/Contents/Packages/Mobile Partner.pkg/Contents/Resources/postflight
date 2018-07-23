@@ -1,0 +1,159 @@
+#!/bin/sh
+
+OLD_NAME="mobilepartner.app"
+APP_NAME=`sed -n -e "s/AppName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1\.app/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+#APP_NAME="Mobile Partner.app"
+APP_NAME_WITHOUT_PREFIX=`sed -n -e "s/AppName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+REAL_NAME=`sed -n -e "s/RealName=\(.*\)\.[A-Za-z]\{3\}[^\\]/\1\.app/p" "/Applications/${OLD_NAME}/Contents/Resources/SysConfig.dat"`
+
+#begin: DTS2013022800615 begin
+chmod -R 775 /Applications/$OLD_NAME
+#end: DTS2013022800615 end
+
+cd /Applications
+
+#DTS2010111603152 modify begin
+#DTS2011081005433 modify begin
+if [ "x${APP_NAME}" != "x" ]
+then
+  if [ -e "./${APP_NAME}" ]
+  then
+    rm -r "./${APP_NAME}"
+  fi
+fi
+
+if [ -e "./Mobile Partner.app" ]
+then
+  rm -r "./Mobile Partner.app"
+fi
+#DTS2011081005433 modify end
+#DTS2010111603152 modify end
+
+#rename mobilepartner according to the name defined in SysConfig.dat
+cp -Rf "${OLD_NAME}" "${REAL_NAME}"
+rm -Rf "${OLD_NAME}"
+sleep 2
+
+#begin: DTS2013022800615 begin
+chmod -R 775 "/Applications/${REAL_NAME}"
+#end: DTS2013022800615 end
+
+#copy lib in ${REAL_NAME} to XStartSreen
+if [ -e "/Applications/${REAL_NAME}/Contents/Resources/XStartScreen.app/Contents/copylib" ]
+then
+    sh "/Applications/${REAL_NAME}/Contents/Resources/XStartScreen.app/Contents/copylib" "${REAL_NAME}"
+    rm "/Applications/${REAL_NAME}/Contents/Resources/XStartScreen.app/Contents/copylib"
+    sleep 2
+fi
+
+#copy lib in ${REAL_NAME} to OnlineUpdate
+if [ -e "/Applications/${REAL_NAME}/Contents/Resources/UpdateDog/MAC_Copy_Lib" ]
+then
+    sh "/Applications/${REAL_NAME}/Contents/Resources/UpdateDog/MAC_Copy_Lib" "${REAL_NAME}"
+    rm "/Applications/${REAL_NAME}/Contents/Resources/UpdateDog/MAC_Copy_Lib"
+    sleep 2
+fi
+
+#begin: DTS2013022800615 begin
+# fix the UI block issue of Mac10.6 when lauching ouc along with system startup
+if [ -e "/Library/StartupItems/StartOuc/StartupParameters.plist" ]
+then
+    sudo rm -Rf "/Library/StartupItems/StartOuc/StartupParameters.plist"
+fi
+
+if [ -e "/Library/LaunchAgents/ouc.plist" ]
+then
+    /bin/launchctl unload /Library/LaunchAgents/ouc.plist
+fi
+
+killall -c ouc
+rm -Rf "/Library/StartupItems/StartOuc"
+sudo mv "/Applications/${REAL_NAME}/Contents/Resources/UpdateDog/StartOuc" "/Library/StartupItems/StartOuc"
+sleep 2
+sudo chown -R root:wheel "/Library/StartupItems/StartOuc"
+sudo chmod -R 755 "/Library/StartupItems/StartOuc"
+
+sudo mv -f "/Library/StartupItems/StartOuc/ouc.plist" "/Library/LaunchAgents/"
+if [ -e "/Library/LaunchAgents/ouc.plist" ]
+then
+    sudo chmod -Rf 644 /Library/LaunchAgents/ouc.plist
+    sudo chown -R root:wheel /Library/LaunchAgents/ouc.plist
+    su $USER -c "/bin/launchctl load /Library/LaunchAgents/ouc.plist"
+fi
+
+#sudo StartupItemContext "/Library/StartupItems/StartOuc/StartOuc"
+#end: DTS2013022800615 end
+
+#DTS2012081300845 add begin
+sleep 5
+#DTS2012081300845 add end
+
+#DTS2010080302066 --begin--
+sudo StartupItemContext "/Library/StartupItems/HWPortDetect/HWPortDetect"
+#DTS2010080302066 --end--
+#DTS2011060201211 --begin--
+killall -c HWNetCfg
+sudo StartupItemContext "/Library/StartupItems/HWNetMgr/HWNetMgr"
+#DTS2011060201211 --end--
+cd /
+
+#DTS2011081005433 add begin
+appspre=`defaults read $HOME/Library/Preferences/com.apple.dock persistent-apps`
+nl=`echo "x" | tr 'x' '\34'`
+appspost=`echo -n "$appspre" | sed "s/^[()]$//;s/},/}$nl/" | tr '\n\34' '\00\n'| grep -va "$APP_NAME" |tr '\n\00' ',\n' | sed 's/^,$//'`
+sudo -u $USER defaults write $HOME/Library/Preferences/com.apple.dock persistent-apps "($appspost)"
+
+theApp="Mobile Partner.app"
+appspre=`defaults read $HOME/Library/Preferences/com.apple.dock persistent-apps`
+nl=`echo "x" | tr 'x' '\34'`
+appspost=`echo -n "$appspre" | sed "s/^[()]$//;s/},/}$nl/" | tr '\n\34' '\00\n'| grep -va "$theApp" |tr '\n\00' ',\n' | sed 's/^,$//'`
+sudo -u $USER defaults write $HOME/Library/Preferences/com.apple.dock persistent-apps "($appspost)"
+#DTS2011081005433 add end
+
+if ! defaults read $HOME/Library/Preferences/com.apple.dock persistent-apps | grep "$REAL_NAME"; then
+if ! defaults read $HOME/Library/Preferences/com.apple.dock persistent-apps | grep ${REAL_NAME// /%20}; then
+sudo -u $USER defaults write $HOME/Library/Preferences/com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/$REAL_NAME</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>"
+sleep 1
+sudo killall Dock
+sleep 1
+fi
+fi
+
+# DTS2011021702849 begin
+if [ -e "/Applications/${REAL_NAME}/Contents/Resources/7za" ]
+then
+    rm "/Applications/${REAL_NAME}/Contents/Resources/7za"
+fi
+# DTS2011021702849 end
+
+#BEGIN DTS2013111406801 2013-12-26 modified
+#DTS2011050601376 add begin
+PID=`ps -axc | grep wpa_supplicant | perl -e '($a,$r,$z)=split /  */, <>; print $r;'`
+kill -9 $PID
+PID=`ps -axc |grep wpa_supplicant | awk '{print $1}'`
+kill -9 $PID
+#killall -c wpa_supplicant
+rm -Rf /Library/StartupItems/wpa_supplicant_srv/
+#DTS2011050601376 add end
+#END DTS2013111406801 2013-12-26 modified
+
+
+#begin: added for DTS2013022800615 mac write priviledge
+# make sure file for QuickLink can be modified by UTPS
+if [ -e "/Applications/${REAL_NAME}/Contents/Resources/plugins/QuickLinkUIPlugin" ]
+then
+    cd "/Applications/${REAL_NAME}/Contents/Resources/plugins/QuickLinkUIPlugin"
+    chmod 777 *.xml
+fi
+#end: added for DTS2013022800615 mac write priviledge
+
+
+#BEGIN DTS2013102104263 2013-10-25 added for disable App Nap if os is 10.9
+if sw_vers -productVersion | grep -c 10.9;
+then 
+    sudo defaults write /Library/Preferences/com.yourcompany.mobilepartner NSAppSleepDisabled -bool YES
+fi
+#END DTS2013102104263 2013-10-25 added added for disable App Nap if os is 10.9
+
+
+#sudo killall Finder

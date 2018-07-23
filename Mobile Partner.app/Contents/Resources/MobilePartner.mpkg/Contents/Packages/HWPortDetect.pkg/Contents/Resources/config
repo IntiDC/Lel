@@ -1,0 +1,5 @@
+[Volumes]
+path1=/Volumes/Mobile Partner/Mobile Partner.app/
+path2=/Volumes/Mobile Partner/Mobile Partner.app/Contents/MacOS/AutoOpen
+name=Mobile Partner
+disable_cdrom=false

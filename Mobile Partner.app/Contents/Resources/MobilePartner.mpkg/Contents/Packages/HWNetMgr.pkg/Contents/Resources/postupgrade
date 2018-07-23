@@ -1,0 +1,8 @@
+#!/bin/sh
+killall -c HWNetMgr
+killall -c HWNetCfg
+sudo chown -R root:wheel /Library/StartupItems/HWNetMgr/
+sudo chmod -R 755 /Library/StartupItems/
+sudo StartupItemContext /Library/StartupItems/HWNetMgr/HWNetMgr start&
+sudo chown -R root:wheel /Library/StartupItems/HWNetMgr/
+sudo chmod -R 755 /Library/StartupItems/

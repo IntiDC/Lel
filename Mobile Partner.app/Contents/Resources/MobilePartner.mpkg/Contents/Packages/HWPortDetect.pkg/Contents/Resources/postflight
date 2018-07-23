@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ -e "/Library/StartupItems/HWPortDetect/StartupParameters.plist" ]
+then
+    sudo rm -Rf "/Library/StartupItems/HWPortDetect/StartupParameters.plist"
+    sudo rm -Rf "/Library/StartupItems/HWPortDetect/HWPortDetect"
+fi
+
+if [ -e "/Library/LaunchAgents/HWPortCfg.plist" ]
+then
+    /bin/launchctl unload /Library/LaunchAgents/HWPortCfg.plist
+    su $USER -c "/bin/launchctl load /Library/LaunchAgents/HWPortCfg.plist"
+fi
